@@ -2,6 +2,7 @@ package com.example.community.service;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.example.community.dto.LoginDto;
 import com.example.community.dto.MemberDto;
 import com.example.community.entitiy.Member;
 import com.example.community.repository.MemberRepository;
@@ -26,5 +27,11 @@ public class MemberService {
         Member member = dto.toEntity(encodedPw);
 
         memberRepository.save(member);
+    }
+
+    public boolean login(LoginDto loginDto) {
+        return memberRepository.findByMemberId(loginDto.getMemberId())
+                .map(member -> passwordEncoder.matches(loginDto.getMemberPw(), member.getMemberPw()))
+                .orElse(false);
     }
 }

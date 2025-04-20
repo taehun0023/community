@@ -1,6 +1,5 @@
 package com.example.community.controller;
 
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -9,9 +8,11 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
+import com.example.community.dto.LoginDto;
 import com.example.community.dto.MemberDto;
 import com.example.community.service.MemberService;
 
+import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
@@ -23,20 +24,48 @@ public class MemberController {
     private final MemberService memberService;
 
     @GetMapping("/insertForm")
-    public String registerForm(Model model) {
+    public String insertForm(Model model) {
         model.addAttribute("memberDto", new MemberDto());
         return "member/insertForm";
     }
 
 
     @PostMapping("/insert")
-    public String signup(@ModelAttribute @Valid MemberDto memberDto, BindingResult result) {
-        System.out.println(memberDto);
+    public String insert(@ModelAttribute @Valid MemberDto memberDto, BindingResult result, Model model, HttpSession session) {
         if (result.hasErrors()) {
             return "member/insertForm";
         }
-
+        // 회원 저장
         memberService.save(memberDto);
+
+        LoginDto loginDto = new LoginDto(memberDto.getMemberId(), memberDto.getMemberPw());
+        session.setAttribute("loginDto", loginDto);
+        return "redirect:/";
+    }
+
+    @GetMapping("/loginForm")
+    public String loginForm(Model model) {
+        model.addAttribute("loginDto", new LoginDto());
         return "member/loginForm";
+    }
+
+    @PostMapping("/login")
+    public String login(@ModelAttribute LoginDto loginDto, Model model ,HttpSession session) {
+        boolean success = memberService.login(loginDto);
+
+        if (success) {
+            session.setAttribute("loginDto", loginDto); // 세션 저장
+            return "redirect:/"; // 로그인 성공 → 메인 페이지
+        } else {
+            model.addAttribute("loginDto", loginDto);
+            model.addAttribute("error", "아이디 또는 비밀번호가 틀렸습니다.");
+            return "member/loginForm"; // 로그인 실패
+        }
+    }
+
+    @GetMapping("/logout")
+    public String logout(HttpSession session) {
+        session.invalidate(); // 로그아웃 시 세션 삭제
+        return "redirect:/";
     }
 }
